@@ -1,9 +1,10 @@
 /*
  * mujoe_types.h
  *
- *  Created on: Dec 4, 2022
- *      Author: joe
+ *      Author: Joe Corteo
+ *      Source: https://github.com/muJoseph/mujoe_pid
  */
+
 
 #ifndef MUJOE_TYPES_H_
 #define MUJOE_TYPES_H_
