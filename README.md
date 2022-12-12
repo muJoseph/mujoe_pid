@@ -40,6 +40,16 @@ mujoe_pid_initConfigParams( MUJOE_PID_CFG_PRESET_ID_DEMO, &pid_cfg );
 
 ```
 
+Initialize the PID context.
+
+```c
+
+// Initialize PID context
+mujoe_pid_initCtx( &mujoe_pid, &pid_cfg);
+
+```
+
+    
 Call mujoe_pid_run() every T seconds.
 
 ```c
