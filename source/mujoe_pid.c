@@ -38,7 +38,7 @@ static inline void cycle_ctrl( MUJOE_PID_CTX ctx, mujoe_pid_ctrl_out_t ctrl );
 // I term, E(n-1) coefficient
 #define MUJOE_PID_COMPUTE_B1()              (mujoe_coeff_t)((ctx->irr_coeff.N*ctx->cfg.T_sec)/(ctx->irr_coeff.N + (2.0f/ctx->cfg.T_sec)))
 // I term, E(n-2) coefficient
-#define MUJOE_PID_COMPUTE_B2()              (mujoe_coeff_t)((ctx->cfg.T_sec/2.0f)*(ctx->irr_coeff.N-(2.0f/ctx->cfg.T_sec))/(ctx->irr_coeff.N+(2.0f/ctx->cfg.T_sec)))
+#define MUJOE_PID_COMPUTE_B2()              (mujoe_coeff_t)((ctx->cfg.T_sec/2.0f)*((ctx->irr_coeff.N-(2.0f/ctx->cfg.T_sec))/(ctx->irr_coeff.N+(2.0f/ctx->cfg.T_sec))))
 
 // D term, E(n) coefficient
 #define MUJOE_PID_COMPUTE_C0()              (mujoe_coeff_t)((4.0f*ctx->irr_coeff.N)/((2.0f*ctx->irr_coeff.N*ctx->cfg.T_sec)+4.0f))
@@ -56,6 +56,36 @@ static inline void cycle_ctrl( MUJOE_PID_CTX ctx, mujoe_pid_ctrl_out_t ctrl );
 //////////////////////////////////////////////////////////////////////////////////////////////
 //  FUNCTIONS
 //////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+void mujoe_pid_initConfigParams( mujoe_pid_cfg_id_t presetId, mujoe_pid_cfg_t *pCfg )
+{
+
+    memset( pCfg, 0, sizeof(mujoe_pid_cfg_t) );
+
+    // TODO: User may add custom presets here
+    switch( presetId )
+    {
+        // Demo Configuration
+        case MUJOE_PID_CFG_PRESET_ID_DEMO:
+            pCfg->antiWindup = false;       // Anti-windup is disabled
+            pCfg->Imin = 0;
+            pCfg->Imax = 0;
+            pCfg->outputSaturation = false; // Output saturation is disabled
+            pCfg->Umax = 0;
+            pCfg->Umin = 0;
+            pCfg->T_sec = 100e-3;           // Sample interval = 100 ms, (10 Hz)
+            pCfg->lpf_f_Hz = 20;            // LPF 3dB Frequency: 20 Hz
+            pCfg->Kp = 1;
+            pCfg->Ki = 2;
+            pCfg->Kd = 0.0125;
+        default:
+            break;
+    }
+
+
+}// mujoe_pid_initConfigParams
 
 mujoe_pid_err_t mujoe_pid_initCtx( MUJOE_PID_CTX ctx, mujoe_pid_cfg_t *pCfg )
 {
@@ -92,17 +122,17 @@ mujoe_pid_ctrl_out_t mujoe_pid_run( MUJOE_PID_CTX ctx, mujoe_pid_err_in_t err )
     cycle_error( ctx, err );
 
     // Compute proportional term
-    if( ctx->Kp != 0 )
+    if( ctx->cfg.Kp != 0 )
     {
-        ctx->rt.P = ctx->Kp * ( ctx->rt.E[0]                            // E(n)
+        ctx->rt.P = ctx->cfg.Kp * ( ctx->rt.E[0]                            // E(n)
                               - ctx->irr_coeff.a[0]*ctx->rt.E[1]        // E(n-1)
                               + ctx->irr_coeff.a[1]*ctx->rt.E[2] );     // E(n-2)
     }
 
     // Compute integral term
-    if( ctx->Ki != 0 )
+    if( ctx->cfg.Ki != 0 )
     {
-        ctx->rt.I = ctx->Ki * ( ctx->irr_coeff.b[0]*ctx->rt.E[0]        // E(n)
+        ctx->rt.I = ctx->cfg.Ki * ( ctx->irr_coeff.b[0]*ctx->rt.E[0]        // E(n)
                               + ctx->irr_coeff.b[1]*ctx->rt.E[1]        // E(n-1)
                               + ctx->irr_coeff.b[2]*ctx->rt.E[2] );     // E(n-2)
 
@@ -115,9 +145,9 @@ mujoe_pid_ctrl_out_t mujoe_pid_run( MUJOE_PID_CTX ctx, mujoe_pid_err_in_t err )
     }
 
     // Compute derivative term
-    if( ctx->Kd != 0 )
+    if( ctx->cfg.Kd != 0 )
     {
-        ctx->rt.D = ctx->Kd * ( ctx->irr_coeff.c[0]*ctx->rt.E[0]        // E(n)
+        ctx->rt.D = ctx->cfg.Kd * ( ctx->irr_coeff.c[0]*ctx->rt.E[0]        // E(n)
                               - ctx->irr_coeff.c[1]*ctx->rt.E[1]        // E(n-1)
                               + ctx->irr_coeff.c[2]*ctx->rt.E[2] );     // E(n-2)
     }
@@ -143,12 +173,37 @@ mujoe_pid_ctrl_out_t mujoe_pid_run( MUJOE_PID_CTX ctx, mujoe_pid_err_in_t err )
 
 void mujoe_pid_updateGains( MUJOE_PID_CTX ctx, mujoe_coeff_t kp, mujoe_coeff_t ki, mujoe_coeff_t kd)
 {
-    ctx->Kp = kp;
-    ctx->Ki = ki;
-    ctx->Kd = kd;
+    ctx->cfg.Kp = kp;
+    ctx->cfg.Ki = ki;
+    ctx->cfg.Kd = kd;
     mujoe_pid_reset(ctx);
 
 }// mujoe_pid_updateGains
+
+mujoe_pid_err_t mujoe_pid_enableAntWindup( MUJOE_PID_CTX ctx, float min, float max )
+{
+    // Abort if parameters are invalid
+    if( max <= min )
+        return MUJOE_PID_ERR_INV_PARAM;
+
+    ctx->cfg.Imax = max;
+    ctx->cfg.Imin = min;
+    ctx->cfg.antiWindup = true;
+    mujoe_pid_reset( ctx );
+
+    return MUJOE_PID_ERR_NONE;
+
+} // mujoe_pid_enableAntWindup
+
+void mujoe_pid_disableAntiWindup( MUJOE_PID_CTX ctx )
+{
+    ctx->cfg.antiWindup = false;
+    ctx->cfg.Imax = 0;
+    ctx->cfg.Imin = 0;
+    mujoe_pid_reset( ctx );
+
+} // mujoe_pid_disableAntiWindup
+
 
 void mujoe_pid_reset( MUJOE_PID_CTX ctx )
 {
