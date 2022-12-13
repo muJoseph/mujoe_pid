@@ -2,7 +2,8 @@
 
 C implementation of the parallel PID controller seen below.
 
-![image](https://user-images.githubusercontent.com/5027131/206946790-bd493dfe-8533-4656-8a61-e66577dcd059.png)
+![image](https://user-images.githubusercontent.com/5027131/207207963-31fcee08-4749-472e-8301-ce9d362680ca.png)
+
 
 # Features:
 
