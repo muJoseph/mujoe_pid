@@ -5,7 +5,7 @@ C implementation of the parallel PID controller seen below.
 ![image](https://user-images.githubusercontent.com/5027131/207208097-6c52481c-04e0-4476-b202-f957ded6db41.png)
 
 
-# Features:
+## Features:
 
 • Derivative low-pass-filter (LPF) with configurable pole location
 
@@ -14,7 +14,7 @@ C implementation of the parallel PID controller seen below.
 • Configurable anti-windup functionality
 
 
-# Quickstart:
+## Quickstart:
 
 Create a global PID context structure.
 
@@ -75,7 +75,7 @@ for(;;)
   
 ```
 
-# More Info:
+## More Info:
 
 Refer to doc/mujoe_pid_doc.pdf for theory and validation.
 
